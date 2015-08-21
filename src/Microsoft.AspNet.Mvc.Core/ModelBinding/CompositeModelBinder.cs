@@ -35,29 +35,38 @@ namespace Microsoft.AspNet.Mvc.ModelBinding
 
         public virtual async Task<ModelBindingResult> BindModelAsync([NotNull] ModelBindingContext bindingContext)
         {
-            // Will there be a last chance (fallback) binding attempt?
-            var isFirstChanceBinding = bindingContext.FallbackToEmptyPrefix &&
-                !string.IsNullOrEmpty(bindingContext.ModelName);
-
-            var newBindingContext = CreateNewBindingContext(bindingContext, bindingContext.ModelName);
+            var newBindingContext = CreateNewBindingContext(bindingContext);
             if (newBindingContext == null)
             {
                 // Unable to find a value provider for this binding source. Binding will fail.
                 return null;
             }
 
-            newBindingContext.IsFirstChanceBinding = isFirstChanceBinding;
-            var modelBindingResult = await TryBind(newBindingContext);
-
-            if (modelBindingResult == null && isFirstChanceBinding)
+            if (bindingContext.IsTopLevelObject)
             {
-                // Fall back to empty prefix.
-                newBindingContext = CreateNewBindingContext(bindingContext, modelName: string.Empty);
-                Debug.Assert(newBindingContext != null, "Should have failed on first attempt.");
-
-                modelBindingResult = await TryBind(newBindingContext);
+                if (bindingContext.BinderModelName != null)
+                {
+                    newBindingContext.ModelName = bindingContext.BinderModelName;
+                }
+                else if (bindingContext.BindingSource.IsGreedy)
+                {
+                    newBindingContext.ModelName = bindingContext.ModelName;
+                }
+                else if (await bindingContext.ValueProvider.ContainsPrefixAsync(bindingContext.ModelName))
+                {
+                    bindingContext.ModelName = bindingContext.ModelName;
+                }
+                else
+                {
+                    bindingContext.ModelName = string.Empty;
+                }
+            }
+            else
+            {
+                newBindingContext.ModelName = bindingContext.ModelName;
             }
 
+            var modelBindingResult = await RunModelBinders(newBindingContext);
             if (modelBindingResult == null)
             {
                 // Unable to bind or something went wrong.
@@ -102,7 +111,7 @@ namespace Microsoft.AspNet.Mvc.ModelBinding
                 modelBindingResult.ValidationNode);
         }
 
-        private async Task<ModelBindingResult> TryBind(ModelBindingContext bindingContext)
+        private async Task<ModelBindingResult> RunModelBinders(ModelBindingContext bindingContext)
         {
             RuntimeHelpers.EnsureSufficientExecutionStack();
 
@@ -139,15 +148,12 @@ namespace Microsoft.AspNet.Mvc.ModelBinding
             return null;
         }
 
-        private static ModelBindingContext CreateNewBindingContext(
-            ModelBindingContext oldBindingContext,
-            string modelName)
+        private static ModelBindingContext CreateNewBindingContext(ModelBindingContext oldBindingContext)
         {
             var newBindingContext = new ModelBindingContext
             {
                 Model = oldBindingContext.Model,
                 ModelMetadata = oldBindingContext.ModelMetadata,
-                ModelName = modelName,
                 ModelState = oldBindingContext.ModelState,
                 ValueProvider = oldBindingContext.ValueProvider,
                 OperationBindingContext = oldBindingContext.OperationBindingContext,

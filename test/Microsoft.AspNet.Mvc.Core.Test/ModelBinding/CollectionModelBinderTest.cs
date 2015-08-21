@@ -234,7 +234,6 @@ namespace Microsoft.AspNet.Mvc.ModelBinding.Test
 
             var context = CreateContext();
             context.IsTopLevelObject = true;
-            context.IsFirstChanceBinding = true;
 
             // Explicit prefix and empty model name both ignored.
             context.BinderModelName = "prefix";

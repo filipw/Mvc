@@ -54,7 +54,6 @@ namespace Microsoft.AspNet.Mvc.ModelBinding
                 ModelBindingContext = new ModelBindingContext
                 {
                     IsTopLevelObject = isTopLevelObject,
-                    IsFirstChanceBinding = isFirstChanceBinding,
 
                     // Random type.
                     ModelMetadata = metadataProvider.GetMetadataForType(typeof(Person)),

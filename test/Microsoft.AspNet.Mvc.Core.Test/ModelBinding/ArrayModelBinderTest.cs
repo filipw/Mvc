@@ -43,7 +43,6 @@ namespace Microsoft.AspNet.Mvc.ModelBinding.Test
             var binder = new ArrayModelBinder<string>();
 
             var context = CreateContext();
-            context.IsFirstChanceBinding = true;
             context.IsTopLevelObject = true;
 
             // Explicit prefix and empty model name both ignored.
